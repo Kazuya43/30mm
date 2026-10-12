@@ -37,7 +37,7 @@ input { font: inherit; font-size: 16px; padding: 10px 12px; border: 1px solid va
 /* タイマー */
 .clock { font-family: var(--clock); font-weight: 800; font-size: clamp(64px, 22vw, 104px); line-height: 1.1; text-align: center; font-variant-numeric: tabular-nums; letter-spacing: -.02em; }
 .bar { height: 8px; background: var(--grid); border-radius: 4px; overflow: hidden; }
-#bar-fill { height: 100%; width: 0; background: var(--accent); transition: width .5s linear; }
+.bar .fill { display: block; height: 100%; width: 0; background: var(--accent); transition: width .5s linear; }
 
 /* 進み方の表示 */
 .progress > * { display: none; }
@@ -58,9 +58,16 @@ input { font: inherit; font-size: 16px; padding: 10px 12px; border: 1px solid va
 @keyframes frameB { 0% { visibility: hidden; } 50% { visibility: visible; } }
 @keyframes hop { 50% { transform: translateY(-2px); } }
 .flag { position: absolute; right: 0; bottom: 2px; width: 28px; height: 28px; fill: var(--muted); shape-rendering: crispEdges; }
-.seg { display: flex; gap: 4px; align-self: center; background: var(--bg); border: 1px solid var(--line); border-radius: 999px; padding: 3px; }
-.seg button { background: none; border: 0; border-radius: 999px; padding: 4px 12px; font-size: 12px; color: var(--muted); }
-.seg button.on { background: var(--fg); color: var(--bg); font-weight: 700; }
+.progress { display: block; }
+
+/* 設定 */
+.options { display: flex; flex-direction: column; gap: 8px; }
+.opt { display: flex; flex-direction: column; gap: 10px; text-align: left; background: var(--bg); border: 2px solid var(--line); border-radius: 12px; padding: 12px 14px; color: var(--fg); }
+.opt.on { border-color: var(--accent); }
+.opt-name { display: flex; flex-direction: column; font-weight: 700; }
+.opt-name small { font-weight: 400; font-size: 12px; color: var(--muted); }
+.opt .blocks { height: 28px; }
+.opt .track { height: 36px; }
 
 .label { margin: 4px 0 0; font-size: 12px; color: var(--muted); }
 .big { margin: 0; font-size: 18px; word-break: break-word; }

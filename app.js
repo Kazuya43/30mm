@@ -100,7 +100,7 @@ function renderTiles(container, tiles) {
 
 // ---- views ----
 function showView(name) {
-  ["timer", "log", "stats"].forEach((v) => { $(`view-${v}`).hidden = v !== name; });
+  ["timer", "log", "stats", "settings"].forEach((v) => { $(`view-${v}`).hidden = v !== name; });
   document.querySelectorAll(".tab").forEach((b) => b.classList.toggle("active", b.dataset.view === name));
   if (name === "log") renderLog();
   if (name === "stats") renderStats();
@@ -153,16 +153,22 @@ const BLOCKS = 30; // 1ブロック = 1分
 
 function setProgressStyle(style) {
   $("progress").dataset.style = style;
-  document.querySelectorAll("#style-seg button").forEach((b) => b.classList.toggle("on", b.dataset.style === style));
+  document.querySelectorAll("#style-options .opt").forEach((b) => {
+    b.classList.toggle("on", b.dataset.style === style);
+    b.setAttribute("aria-checked", String(b.dataset.style === style));
+  });
   save(KEY_STYLE, style);
 }
-$("style-seg").addEventListener("click", (e) => {
-  const b = e.target.closest("button");
+$("style-options").addEventListener("click", (e) => {
+  const b = e.target.closest(".opt");
   if (b) setProgressStyle(b.dataset.style);
 });
 
 // 残り分数ぶんのブロックが点灯し、いま消えかけている1つが点滅する
 for (let i = 0; i < BLOCKS; i++) $("blocks").append(el("span"));
+document.querySelectorAll(".preview-blocks").forEach((box) => {
+  for (let i = 0; i < BLOCKS; i++) box.append(el("span", i < 17 ? "on" : i === 17 ? "on blink" : ""));
+});
 let shownBlocks = -1;
 function updateBlocks(remaining) {
   if (remaining === shownBlocks) return;
@@ -179,9 +185,10 @@ const RUNNER_FRAMES = [
   ["....###.....", "....###.....", "....###.....", ".....#......", "....###.....", "...####.....",
    "....###.#...", ".....#......", ".....##.....", "....#..#....", "....#...#...", "............"],
 ];
-$("runner").innerHTML = RUNNER_FRAMES.map((rows, f) =>
+const runnerSvg = RUNNER_FRAMES.map((rows, f) =>
   `<g class="f${f}">${rows.map((r, y) => [...r].map((c, x) => (c === "#" ? `<rect x="${x}" y="${y}" width="1" height="1"/>` : "")).join("")).join("")}</g>`
 ).join("");
+document.querySelectorAll(".runner").forEach((svg) => { svg.innerHTML = runnerSvg; });
 
 setProgressStyle(load(KEY_STYLE, "bar"));
 

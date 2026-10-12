@@ -32,18 +32,13 @@
     <div id="running" class="card" hidden>
       <div class="clock" id="clock">30:00</div>
       <div id="progress" class="progress" data-style="bar">
-        <div class="bar"><div id="bar-fill"></div></div>
+        <div class="bar"><div class="fill" id="bar-fill"></div></div>
         <div class="blocks" id="blocks"></div>
         <div class="track">
           <div class="trail" id="trail"></div>
           <svg class="runner" id="runner" viewBox="0 0 12 12" aria-hidden="true"></svg>
           <svg class="flag" viewBox="0 0 12 12" aria-hidden="true"><rect x="2" y="1" width="1" height="11"/><path d="M3 1h7l-2 2.5 2 2.5H3z"/></svg>
         </div>
-      </div>
-      <div class="seg" id="style-seg" role="radiogroup" aria-label="進み方の表示">
-        <button type="button" data-style="bar">バー</button>
-        <button type="button" data-style="blocks">ブロック</button>
-        <button type="button" data-style="runner">ランナー</button>
       </div>
       <p class="label">やること</p><p id="r-task" class="big"></p>
       <p class="label">目標</p><p id="r-goal" class="big"></p>
@@ -103,6 +98,32 @@
       <p id="genres-empty" class="muted" hidden>まだ記録がありません。</p>
     </div>
   </section>
+
+  <!-- 設定 -->
+  <section id="view-settings" hidden>
+    <div class="card">
+      <h2>時間経過の表示</h2>
+      <p class="sub">計測中の画面に表示されます</p>
+      <div class="options" id="style-options" role="radiogroup" aria-label="時間経過の表示">
+        <button type="button" class="opt" role="radio" data-style="bar">
+          <span class="opt-name">バー</span>
+          <span class="progress" data-style="bar"><span class="bar"><span class="fill" style="width:40%"></span></span></span>
+        </button>
+        <button type="button" class="opt" role="radio" data-style="blocks">
+          <span class="opt-name">ブロック<small>1ブロック=1分。点滅しながら消えていく</small></span>
+          <span class="progress" data-style="blocks"><span class="blocks preview-blocks"></span></span>
+        </button>
+        <button type="button" class="opt" role="radio" data-style="runner">
+          <span class="opt-name">ランナー<small>キャラクターがゴールへ走る</small></span>
+          <span class="progress" data-style="runner"><span class="track">
+            <span class="trail" style="width:calc(.4 * (100% - 40px) + 6px)"></span>
+            <svg class="runner" style="left:calc(.4 * (100% - 40px))" viewBox="0 0 12 12" aria-hidden="true"></svg>
+            <svg class="flag" viewBox="0 0 12 12" aria-hidden="true"><rect x="2" y="1" width="1" height="11"/><path d="M3 1h7l-2 2.5 2 2.5H3z"/></svg>
+          </span></span>
+        </button>
+      </div>
+    </div>
+  </section>
 </main>
 
 <nav class="tabbar">
@@ -114,6 +135,9 @@
   </button>
   <button class="tab" data-view="stats">
     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h16M7 16v-5M12 16V6M17 16v-8"/></svg>グラフ
+  </button>
+  <button class="tab" data-view="settings">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg>設定
   </button>
 </nav>
 
