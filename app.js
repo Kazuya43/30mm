@@ -112,6 +112,7 @@ document.querySelectorAll(".tab").forEach((b) => b.addEventListener("click", () 
 
 function render() {
   const phase = !current ? "setup" : current.finishedAt ? "rating" : "running";
+  document.body.dataset.phase = phase;
   $("setup").hidden = phase !== "setup";
   $("resume").hidden = true;
   $("running").hidden = phase !== "running";

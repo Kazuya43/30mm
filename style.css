@@ -159,3 +159,28 @@ input { font: inherit; font-size: 16px; padding: 10px 12px; border: 1px solid va
 .pip { min-height: 100vh; display: flex; flex-direction: column; justify-content: center; gap: 8px; padding: 12px 16px; }
 .pip-goal { font-size: 13px; font-weight: 700; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .pip .clock { font-size: clamp(40px, 22vw, 96px); }
+
+/* スマホ横画面の計測中: タイマーだけを画面いっぱいに表示 */
+@media (orientation: landscape) and (max-height: 540px) {
+  body[data-phase="running"] header,
+  body[data-phase="running"] .tabbar,
+  body[data-phase="running"] #running .label,
+  body[data-phase="running"] #r-task,
+  body[data-phase="running"] #running .actions { display: none; }
+  body[data-phase="running"] main,
+  body[data-phase="running"] #view-timer { max-width: none; height: 100vh; height: 100dvh; margin: 0; }
+  body[data-phase="running"] main {
+    padding: 0 max(24px, env(safe-area-inset-right, 0px)) 0 max(24px, env(safe-area-inset-left, 0px));
+  }
+  body[data-phase="running"] #running {
+    height: 100%; justify-content: center; gap: 2vh;
+    background: none; border: 0; border-radius: 0; padding: 0;
+  }
+  body[data-phase="running"] #r-goal {
+    order: -1; text-align: center; font-size: clamp(14px, 5vh, 22px); font-weight: 700; color: var(--muted);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  body[data-phase="running"] .clock { font-size: min(30vw, 58vh); line-height: 1; }
+  body[data-phase="running"] .progress { width: 100%; }
+  body[data-phase="running"] .bar { height: 10px; }
+}
