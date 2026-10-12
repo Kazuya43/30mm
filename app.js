@@ -192,20 +192,13 @@ function onTaskInput() {
 $("task").addEventListener("input", onTaskInput);
 
 // ---- 続きから ----
-// テーマ(やること)ごとの最新記録が5未満なら、続きの候補に出す
+// 直前の記録が5未満なら、その1件だけを続きの候補に出す
 let pendingContinue = null; // { id, task }
 
 function resumeCandidates() {
-  const dismissed = load(KEY_DISMISSED, []);
-  const latest = new Map();
-  getLogs().forEach((l) => {
-    const p = latest.get(l.task);
-    if (!p || l.startedAt > p.startedAt) latest.set(l.task, l);
-  });
-  return [...latest.values()]
-    .filter((l) => l.rating < 5 && !dismissed.includes(l.id))
-    .sort((a, b) => b.startedAt - a.startedAt)
-    .slice(0, 3);
+  const last = getLogs().reduce((p, l) => (!p || l.startedAt > p.startedAt ? l : p), null);
+  if (!last || last.rating >= 5 || load(KEY_DISMISSED, []).includes(last.id)) return [];
+  return [last];
 }
 
 function renderResume() {
