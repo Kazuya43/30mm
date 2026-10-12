@@ -115,6 +115,7 @@ function render() {
   $("running").hidden = phase !== "running";
   $("rating").hidden = phase !== "rating";
   clearInterval(tick);
+  keepAwake(false);
   document.title = "30mm 30分タイマー";
   if (phase === "setup") {
     renderTaskSuggestions();
@@ -124,6 +125,7 @@ function render() {
     $("r-goal").textContent = current.goal;
     update();
     tick = setInterval(update, 250);
+    keepAwake(true);
   } else {
     $("rt-title").textContent = current.aborted ? "中断しました" : "30分おつかれさま!";
     $("e-task").textContent = current.task;
@@ -586,4 +588,26 @@ function renderGenres(logs) {
 document.addEventListener("visibilitychange", () => { if (!document.hidden && current && !current.finishedAt) update(); });
 
 $("day").value = dateKey(Date.now());
+// 計測中はスマホの画面が消えないようにする(対応ブラウザのみ)
+let wakeLock = null;
+async function keepAwake(on) {
+  try {
+    if (on && !wakeLock && "wakeLock" in navigator && !document.hidden) {
+      wakeLock = await navigator.wakeLock.request("screen");
+      wakeLock.addEventListener("release", () => { wakeLock = null; });
+    } else if (!on && wakeLock) {
+      await wakeLock.release();
+      wakeLock = null;
+    }
+  } catch { wakeLock = null; }
+}
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden && current && !current.finishedAt) keepAwake(true);
+});
+
+// ホーム画面に追加したときにオフラインでも開けるようにする
+if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
+  navigator.serviceWorker.register("sw.js").catch(() => {});
+}
+
 render();
