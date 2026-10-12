@@ -3,7 +3,10 @@
 const DURATION_MS = 30 * 60 * 1000;
 const KEY_LOGS = "m30.logs";
 const KEY_CURRENT = "m30.current";
+const KEY_TASKS = "m30.tasks";
+const MAX_TASKS = 30;
 const $ = (id) => document.getElementById(id);
+const reducedMotion = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 // ---- storage ----
 function load(key, fallback) {
@@ -14,6 +17,21 @@ function save(key, value) {
 }
 const getLogs = () => load(KEY_LOGS, []);
 const setLogs = (l) => save(KEY_LOGS, l);
+
+// 入力済みの「やること」候補(新しい順)。初回は既存ログから作る
+function getTasks() {
+  const saved = load(KEY_TASKS, null);
+  if (saved) return saved;
+  const fromLogs = [];
+  getLogs().slice().sort((a, b) => b.startedAt - a.startedAt).forEach((l) => {
+    if (!fromLogs.includes(l.task)) fromLogs.push(l.task);
+  });
+  return fromLogs.slice(0, MAX_TASKS);
+}
+const setTasks = (t) => save(KEY_TASKS, t.slice(0, MAX_TASKS));
+
+// 同じ「やること」を同じジャンルにまとめるため、空白の揺れをそろえる
+const normalizeTask = (s) => s.replace(/[\s　]+/g, " ").trim();
 
 // current: { task, goal, startedAt, endsAt, finishedAt?, aborted? } | null
 let current = load(KEY_CURRENT, null);
@@ -28,6 +46,9 @@ function dateKey(ts) {
 }
 const hhmm = (ts) => { const d = new Date(ts); return `${pad(d.getHours())}:${pad(d.getMinutes())}`; };
 const fmt = (ms) => { const s = Math.max(0, Math.ceil(ms / 1000)); return `${pad(Math.floor(s / 60))}:${pad(s % 60)}`; };
+const WD = ["日", "月", "火", "水", "木", "金", "土"];
+const avgOf = (items) => (items.length ? items.reduce((s, l) => s + l.rating, 0) / items.length : null);
+const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
 
 function beep() {
   try {
@@ -42,12 +63,47 @@ function beep() {
   } catch { /* ignore */ }
 }
 
+// confirm() が使えない環境でも動くよう、2回押しで確定する
+function twoTap(btn, idleText, armedText, action) {
+  let timer = null;
+  btn.addEventListener("click", (e) => {
+    e.preventDefault();
+    if (timer) { clearTimeout(timer); timer = null; btn.textContent = idleText; action(); return; }
+    btn.textContent = armedText;
+    timer = setTimeout(() => { timer = null; btn.textContent = idleText; }, 3000);
+  });
+}
+
+// 数字のカウントアップ演出
+function countUp(node, to, decimals = 0) {
+  if (to == null) { node.textContent = "-"; return; }
+  if (reducedMotion() || to === 0) { node.textContent = to.toFixed(decimals); return; }
+  const start = performance.now(), dur = 700;
+  const step = (now) => {
+    const p = Math.min(1, (now - start) / dur);
+    node.textContent = (to * (1 - Math.pow(1 - p, 3))).toFixed(decimals);
+    if (p < 1) requestAnimationFrame(step);
+  };
+  requestAnimationFrame(step);
+}
+
+function renderTiles(container, tiles) {
+  container.innerHTML = "";
+  tiles.forEach(([value, label, decimals]) => {
+    const d = el("div"), b = el("b");
+    d.append(b, el("span", null, label));
+    container.append(d);
+    countUp(b, value, decimals || 0);
+  });
+}
+
 // ---- views ----
 function showView(name) {
-  $("view-timer").hidden = name !== "timer";
-  $("view-log").hidden = name !== "log";
+  ["timer", "log", "stats"].forEach((v) => { $(`view-${v}`).hidden = v !== name; });
   document.querySelectorAll(".tab").forEach((b) => b.classList.toggle("active", b.dataset.view === name));
   if (name === "log") renderLog();
+  if (name === "stats") renderStats();
+  window.scrollTo(0, 0);
 }
 document.querySelectorAll(".tab").forEach((b) => b.addEventListener("click", () => showView(b.dataset.view)));
 
@@ -58,12 +114,14 @@ function render() {
   $("rating").hidden = phase !== "rating";
   clearInterval(tick);
   document.title = "30mm 30分タイマー";
-  if (phase === "running") {
+  if (phase === "setup") {
+    renderTaskSuggestions();
+  } else if (phase === "running") {
     $("r-task").textContent = current.task;
     $("r-goal").textContent = current.goal;
     update();
     tick = setInterval(update, 250);
-  } else if (phase === "rating") {
+  } else {
     $("rt-title").textContent = current.aborted ? "中断しました" : "30分おつかれさま!";
     $("e-task").textContent = current.task;
     $("e-goal").textContent = current.goal;
@@ -97,30 +155,56 @@ function finish(aborted) {
   render();
 }
 
+// ---- 「やること」の候補 ----
+function lastGoalFor(task) {
+  const hit = getLogs().filter((l) => l.task === task).sort((a, b) => b.startedAt - a.startedAt)[0];
+  return hit ? hit.goal : null;
+}
+
+function renderTaskSuggestions() {
+  const tasks = getTasks();
+  const dl = $("task-list");
+  dl.innerHTML = "";
+  tasks.forEach((t) => { const o = document.createElement("option"); o.value = t; dl.append(o); });
+  const box = $("recent");
+  box.innerHTML = "";
+  tasks.slice(0, 8).forEach((t) => {
+    const chip = el("span", "chip");
+    const pick = el("button", "pick", t);
+    pick.type = "button";
+    pick.addEventListener("click", () => { $("task").value = t; onTaskInput(); $("goal").focus(); });
+    const x = el("button", "x", "×");
+    x.type = "button";
+    x.setAttribute("aria-label", `「${t}」を候補から消す`);
+    x.addEventListener("click", () => { setTasks(getTasks().filter((v) => v !== t)); renderTaskSuggestions(); });
+    chip.append(pick, x);
+    box.append(chip);
+  });
+}
+
+function onTaskInput() {
+  const goal = lastGoalFor(normalizeTask($("task").value));
+  $("goal").placeholder = goal ? `前回: ${goal}` : "例: 見出しを5つ決める";
+}
+$("task").addEventListener("input", onTaskInput);
+
 // ---- timer actions ----
 $("setup").addEventListener("submit", (e) => {
   e.preventDefault();
-  const task = $("task").value.trim(), goal = $("goal").value.trim();
+  const task = normalizeTask($("task").value), goal = $("goal").value.trim();
   if (!task || !goal) return;
+  setTasks([task, ...getTasks().filter((t) => t !== task)]);
   const now = Date.now();
   current = { task, goal, startedAt: now, endsAt: now + DURATION_MS };
   save(KEY_CURRENT, current);
   $("task").value = ""; $("goal").value = "";
+  onTaskInput();
   try {
     if ("Notification" in window && Notification.permission === "default") Notification.requestPermission();
   } catch { /* ignore */ }
   render();
 });
 
-// confirm() が使えない環境でも動くよう、2回押しで確定する
-function twoTap(btn, idleText, armedText, action) {
-  let timer = null;
-  btn.addEventListener("click", () => {
-    if (timer) { clearTimeout(timer); timer = null; btn.textContent = idleText; action(); return; }
-    btn.textContent = armedText;
-    timer = setTimeout(() => { timer = null; btn.textContent = idleText; }, 3000);
-  });
-}
 twoTap($("abort"), "中断する", "もう一度押すと中断して評価へ", () => finish(true));
 
 $("stars").addEventListener("click", (e) => {
@@ -130,6 +214,8 @@ $("stars").addEventListener("click", (e) => {
   document.querySelectorAll("#stars button").forEach((x) => x.classList.toggle("on", Number(x.dataset.v) <= rating));
   $("save").disabled = false;
 });
+
+const PRAISE = { 5: "完璧!", 4: "いい感じ!", 3: "ナイス集中", 2: "一歩前進", 1: "まず始めたのがえらい" };
 
 $("rating").addEventListener("submit", (e) => {
   e.preventDefault();
@@ -147,44 +233,82 @@ $("rating").addEventListener("submit", (e) => {
     note: $("note").value.trim(),
   });
   setLogs(logs);
+  const todays = logs.filter((l) => dateKey(l.startedAt) === dateKey(Date.now()));
+  const mins = todays.reduce((s, l) => s + l.minutes, 0);
+  celebrate(rating, PRAISE[rating], `今日 ${todays.length}本目・合計 ${mins}分`);
   current = null;
   try { localStorage.removeItem(KEY_CURRENT); } catch { /* ignore */ }
   render();
-  $("day").value = dateKey(Date.now());
-  showView("log");
+  showView("stats");
 });
+
+// ---- 演出 ----
+let toastTimer = null;
+function celebrate(score, title, body) {
+  $("toast-title").textContent = title;
+  $("toast-body").textContent = body;
+  const t = $("toast");
+  t.hidden = true; void t.offsetWidth; t.hidden = false; // アニメーションを再生し直す
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { t.hidden = true; }, 3200);
+  if (!reducedMotion()) confetti(score * 30);
+}
+
+function confetti(count) {
+  const canvas = $("confetti"), ctx = canvas.getContext("2d");
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = innerWidth * dpr; canvas.height = innerHeight * dpr;
+  ctx.scale(dpr, dpr);
+  const accent = getComputedStyle(document.documentElement).getPropertyValue("--accent").trim() || "#e8543a";
+  const colors = [accent, "#f2b134", "#3aa1e8", "#4cbf86", "#b07be8"];
+  const parts = Array.from({ length: count }, () => ({
+    x: innerWidth / 2 + (Math.random() - 0.5) * 80,
+    y: innerHeight * 0.75,
+    vx: (Math.random() - 0.5) * 12,
+    vy: -8 - Math.random() * 10,
+    r: Math.random() * Math.PI,
+    vr: (Math.random() - 0.5) * 0.4,
+    s: 5 + Math.random() * 5,
+    c: colors[Math.floor(Math.random() * colors.length)],
+  }));
+  const start = performance.now();
+  const frame = (now) => {
+    ctx.clearRect(0, 0, innerWidth, innerHeight);
+    parts.forEach((p) => {
+      p.vy += 0.35; p.vx *= 0.99; p.x += p.vx; p.y += p.vy; p.r += p.vr;
+      ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.r);
+      ctx.fillStyle = p.c; ctx.fillRect(-p.s / 2, -p.s / 4, p.s, p.s / 2);
+      ctx.restore();
+    });
+    if (now - start < 2200) requestAnimationFrame(frame);
+    else ctx.clearRect(0, 0, innerWidth, innerHeight);
+  };
+  requestAnimationFrame(frame);
+}
 
 // ---- log view ----
 function renderLog() {
   const day = $("day").value || dateKey(Date.now());
   $("day").value = day;
   const items = getLogs().filter((l) => dateKey(l.startedAt) === day).sort((a, b) => a.startedAt - b.startedAt);
-  const mins = items.reduce((s, l) => s + l.minutes, 0);
-  const avg = items.length ? (items.reduce((s, l) => s + l.rating, 0) / items.length).toFixed(1) : "-";
-  $("summary").innerHTML = "";
-  [[items.length, "セッション"], [mins, "合計(分)"], [avg, "平均達成度"]].forEach(([v, k]) => {
-    const d = document.createElement("div");
-    const b = document.createElement("b"); b.textContent = v;
-    const s = document.createElement("span"); s.textContent = k;
-    d.append(b, s);
-    $("summary").append(d);
-  });
+  renderTiles($("summary"), [
+    [items.length, "セッション"],
+    [items.reduce((s, l) => s + l.minutes, 0), "合計(分)"],
+    [avgOf(items), "平均達成度", 1],
+  ]);
   $("empty").hidden = items.length > 0;
   const ol = $("entries");
   ol.innerHTML = "";
   items.forEach((l) => {
-    const li = document.createElement("li");
-    const mk = (cls, text) => { const el = document.createElement("div"); el.className = cls; el.textContent = text; return el; };
-    li.append(mk("time", `${hhmm(l.startedAt)}–${hhmm(l.finishedAt)}(${l.minutes}分${l.aborted ? "・中断" : ""})`));
-    li.append(mk("t", l.task));
-    li.append(mk("g", `目標: ${l.goal}`));
-    if (l.note) li.append(mk("n", `メモ: ${l.note}`));
-    const score = mk("score", String(l.rating));
-    const small = document.createElement("small"); small.textContent = " /5";
-    score.append(small);
+    const li = el("li", "entry");
+    li.append(el("div", "time", `${hhmm(l.startedAt)}–${hhmm(l.finishedAt)}(${l.minutes}分${l.aborted ? "・中断" : ""})`));
+    li.append(el("div", "t", l.task));
+    li.append(el("div", "g", `目標: ${l.goal}`));
+    if (l.note) li.append(el("div", "n", `メモ: ${l.note}`));
+    const score = el("div", "score", String(l.rating));
+    score.append(el("small", null, "/5"));
     li.append(score);
-    const del = document.createElement("button");
-    del.className = "del"; del.textContent = "削除";
+    const del = el("button", "del", "削除");
     twoTap(del, "削除", "もう一度押すと削除", () => {
       setLogs(getLogs().filter((x) => x.id !== l.id));
       renderLog();
@@ -212,6 +336,127 @@ $("export").addEventListener("click", () => {
   a.click();
   URL.revokeObjectURL(a.href);
 });
+
+// ---- stats view ----
+function lastDays(n) {
+  const today = new Date();
+  return Array.from({ length: n }, (_, i) => new Date(today.getFullYear(), today.getMonth(), today.getDate() - (n - 1 - i)));
+}
+
+function streak(logs) {
+  const days = new Set(logs.map((l) => dateKey(l.startedAt)));
+  const d = new Date();
+  if (!days.has(dateKey(d.getTime()))) d.setDate(d.getDate() - 1); // 今日まだでも昨日まで続いていれば数える
+  let n = 0;
+  while (days.has(dateKey(d.getTime()))) { n++; d.setDate(d.getDate() - 1); }
+  return n;
+}
+
+function barPath(x, y, w, h, r) {
+  r = Math.min(r, h, w / 2);
+  return `M${x},${y + h}V${y + r}Q${x},${y} ${x + r},${y}H${x + w - r}Q${x + w},${y} ${x + w},${y + r}V${y + h}Z`;
+}
+
+function barChart(svg, data, { max, ticks, format }) {
+  const W = 320, H = 170, L = 28, R = 6, T = 16, B = 34;
+  const pw = W - L - R, ph = H - T - B, band = pw / data.length, bw = Math.min(24, band * 0.55);
+  const y0 = T + ph;
+  let s = "";
+  ticks.forEach((t) => {
+    const y = y0 - (t / max) * ph;
+    s += `<line class="${t === 0 ? "base" : "grid"}" x1="${L}" x2="${W - R}" y1="${y}" y2="${y}"/>`;
+    s += `<text class="ax" x="${L - 6}" y="${y + 3}" text-anchor="end">${t}</text>`;
+  });
+  data.forEach((d, i) => {
+    const cx = L + band * i + band / 2;
+    const tip = `${d.label}(${d.wd}) ${d.value == null ? "記録なし" : format(d.value)}`;
+    if (d.value) {
+      const h = Math.max(2, (d.value / max) * ph);
+      s += `<path class="bar${d.today ? " today" : ""}" style="animation-delay:${i * 60}ms" d="${barPath(cx - bw / 2, y0 - h, bw, h, 4)}"/>`;
+      s += `<text class="val" x="${cx}" y="${y0 - h - 5}" text-anchor="middle">${format(d.value)}</text>`;
+    }
+    s += `<text class="ax${d.today ? " strong" : ""}" x="${cx}" y="${y0 + 14}" text-anchor="middle">${d.label}</text>`;
+    s += `<text class="ax${d.today ? " strong" : ""}" x="${cx}" y="${y0 + 27}" text-anchor="middle">${d.today ? "今日" : d.wd}</text>`;
+    // ホバー/タップ用の当たり判定(棒より広い)
+    s += `<rect class="hit" x="${cx - band / 2}" y="${T}" width="${band}" height="${ph}"><title>${tip}</title></rect>`;
+  });
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+  svg.innerHTML = s;
+}
+
+function renderStats() {
+  const logs = getLogs();
+  const todayKey = dateKey(Date.now());
+  const days = lastDays(7).map((d) => {
+    const key = dateKey(d.getTime());
+    const items = logs.filter((l) => dateKey(l.startedAt) === key);
+    return {
+      label: `${d.getMonth() + 1}/${d.getDate()}`,
+      wd: WD[d.getDay()],
+      today: key === todayKey,
+      minutes: items.reduce((s, l) => s + l.minutes, 0),
+      avg: avgOf(items),
+    };
+  });
+  const weekItems = logs.filter((l) => l.startedAt >= lastDays(7)[0].getTime());
+
+  renderTiles($("tiles"), [
+    [days[6].minutes, "今日の集中(分)"],
+    [streak(logs), "連続日数"],
+    [avgOf(weekItems), "7日の平均達成度", 1],
+  ]);
+
+  const maxMin = Math.max(30, Math.ceil(Math.max(...days.map((d) => d.minutes)) / 30) * 30);
+  barChart($("chart-min"), days.map((d) => ({ ...d, value: d.minutes })), {
+    max: maxMin, ticks: [0, maxMin / 2, maxMin], format: (v) => `${v}`,
+  });
+  barChart($("chart-rate"), days.map((d) => ({ ...d, value: d.avg })), {
+    max: 5, ticks: [0, 1, 2, 3, 4, 5], format: (v) => v.toFixed(1),
+  });
+
+  renderGenres(logs);
+}
+
+function renderGenres(logs) {
+  const map = new Map();
+  logs.forEach((l) => {
+    if (!map.has(l.task)) map.set(l.task, []);
+    map.get(l.task).push(l);
+  });
+  const genres = [...map.entries()].map(([task, items]) => ({
+    task,
+    items: items.sort((a, b) => b.startedAt - a.startedAt),
+    minutes: items.reduce((s, l) => s + l.minutes, 0),
+    avg: avgOf(items),
+  })).sort((a, b) => b.minutes - a.minutes || b.items[0].startedAt - a.items[0].startedAt);
+
+  const box = $("genres");
+  box.innerHTML = "";
+  $("genres-empty").hidden = genres.length > 0;
+  const top = genres.length ? Math.max(1, genres[0].minutes) : 1;
+  genres.forEach((g, i) => {
+    const det = el("details", "genre");
+    const sum = el("summary");
+    sum.append(el("span", "name", g.task));
+    const track = el("div", "track");
+    const fill = el("div", "fill");
+    fill.style.width = `${(g.minutes / top) * 100}%`;
+    fill.style.animationDelay = `${i * 70}ms`;
+    track.append(fill);
+    sum.append(track);
+    sum.append(el("span", "meta", `${g.items.length}回・${g.minutes}分・平均達成度 ${g.avg.toFixed(1)}`));
+    det.append(sum);
+    const ul = el("ul");
+    g.items.slice(0, 10).forEach((l) => {
+      const li = el("li");
+      const d = new Date(l.startedAt);
+      li.append(el("span", null, `${d.getMonth() + 1}/${d.getDate()} ${hhmm(l.startedAt)} ・ ${l.rating}/5 ・ `), document.createTextNode(l.goal));
+      ul.append(li);
+    });
+    det.append(ul);
+    box.append(det);
+  });
+}
 
 // タブが非アクティブでもタイマーが正確になるよう、復帰時に再判定
 document.addEventListener("visibilitychange", () => { if (!document.hidden && current && !current.finishedAt) update(); });

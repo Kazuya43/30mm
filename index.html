@@ -2,34 +2,29 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>30mm 30分タイマー</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chivo+Mono:wght@800&display=swap">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
 <main>
-  <header>
-    <h1>30mm</h1>
-    <nav>
-      <button class="tab active" data-view="timer">タイマー</button>
-      <button class="tab" data-view="log">ログ</button>
-    </nav>
-  </header>
+  <header><h1>30mm</h1></header>
 
-  <!-- タイマー画面 -->
+  <!-- タイマー -->
   <section id="view-timer">
-    <!-- 開始前 -->
     <form id="setup" class="card">
-      <label>これからやること
-        <input id="task" required maxlength="100" placeholder="例: 企画書の構成を作る" autocomplete="off">
-      </label>
-      <label>30分での目標
-        <input id="goal" required maxlength="100" placeholder="例: 見出しを5つ決める" autocomplete="off">
-      </label>
+      <label for="task">これからやること</label>
+      <input id="task" list="task-list" required maxlength="100" placeholder="例: 企画書の構成を作る" autocomplete="off">
+      <datalist id="task-list"></datalist>
+      <div id="recent" class="chips" aria-label="前に入力したやること"></div>
+      <label for="goal">30分での目標</label>
+      <input id="goal" required maxlength="100" placeholder="例: 見出しを5つ決める" autocomplete="off">
       <button type="submit" class="primary">30分スタート</button>
     </form>
 
-    <!-- 計測中 -->
     <div id="running" class="card" hidden>
       <div class="clock" id="clock">30:00</div>
       <div class="bar"><div id="bar-fill"></div></div>
@@ -38,7 +33,6 @@
       <button id="abort" class="ghost">中断する</button>
     </div>
 
-    <!-- 評価 -->
     <form id="rating" class="card" hidden>
       <h2 id="rt-title">おつかれさま!</h2>
       <p class="label">やること</p><p id="e-task" class="big"></p>
@@ -52,29 +46,62 @@
         <button type="button" data-v="5">5</button>
       </div>
       <p class="hint"><span>1 まったく</span><span>5 完璧</span></p>
-      <label>ひとこと(任意)
-        <input id="note" maxlength="200" placeholder="気づき・次にやること" autocomplete="off">
-      </label>
+      <label for="note">ひとこと(任意)</label>
+      <input id="note" maxlength="200" placeholder="気づき・次にやること" autocomplete="off">
       <button type="submit" class="primary" id="save" disabled>記録する</button>
     </form>
   </section>
 
-  <!-- ログ画面 -->
+  <!-- ログ -->
   <section id="view-log" hidden>
     <div class="daynav">
-      <button id="prev" aria-label="前の日">‹</button>
+      <button id="prev" class="sq" aria-label="前の日">‹</button>
       <input type="date" id="day">
-      <button id="next" aria-label="次の日">›</button>
+      <button id="next" class="sq" aria-label="次の日">›</button>
       <button id="today" class="ghost">今日</button>
     </div>
-    <div class="summary" id="summary"></div>
+    <div class="tiles" id="summary"></div>
     <ol id="entries"></ol>
-    <p id="empty" class="hint" hidden>この日の記録はありません。</p>
-    <div class="tools">
-      <button id="export" class="ghost">JSONで書き出す</button>
+    <p id="empty" class="muted" hidden>この日の記録はありません。</p>
+    <div class="tools"><button id="export" class="ghost">JSONで書き出す</button></div>
+  </section>
+
+  <!-- グラフ -->
+  <section id="view-stats" hidden>
+    <div class="tiles" id="tiles"></div>
+    <div class="card">
+      <h2>日別の集中時間</h2>
+      <p class="sub">直近7日・分</p>
+      <svg id="chart-min" class="chart" role="img" aria-label="日別の集中時間"></svg>
+    </div>
+    <div class="card">
+      <h2>日別の平均達成度</h2>
+      <p class="sub">直近7日・5段階</p>
+      <svg id="chart-rate" class="chart" role="img" aria-label="日別の平均達成度"></svg>
+    </div>
+    <div class="card">
+      <h2>ジャンル</h2>
+      <p class="sub">同じ「やること」をまとめて集計(全期間・合計分の多い順)</p>
+      <div id="genres"></div>
+      <p id="genres-empty" class="muted" hidden>まだ記録がありません。</p>
     </div>
   </section>
 </main>
+
+<nav class="tabbar">
+  <button class="tab active" data-view="timer">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5M9 2h6"/></svg>タイマー
+  </button>
+  <button class="tab" data-view="log">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01"/></svg>ログ
+  </button>
+  <button class="tab" data-view="stats">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h16M7 16v-5M12 16V6M17 16v-8"/></svg>グラフ
+  </button>
+</nav>
+
+<div id="toast" role="status" hidden><b id="toast-title"></b><span id="toast-body"></span></div>
+<canvas id="confetti" aria-hidden="true"></canvas>
 <script src="app.js"></script>
 </body>
 </html>
