@@ -48,9 +48,9 @@ input { font: inherit; font-size: 16px; padding: 10px 12px; border: 1px solid va
 .blocks span.on { background: var(--fg); }
 .blocks span.blink { animation: blink 1s steps(1) infinite; }
 @keyframes blink { 50% { background: var(--grid); } }
-.track { position: relative; height: 44px; border-bottom: 2px dashed var(--line); }
+.track { position: relative; height: 48px; border-bottom: 2px dashed var(--line); }
 .trail { position: absolute; left: 0; bottom: -2px; height: 2px; background: var(--accent); }
-.runner { position: absolute; bottom: 2px; width: 36px; height: 36px; fill: var(--accent); shape-rendering: crispEdges; transition: left .5s linear; animation: hop .4s ease-in-out infinite; }
+.runner { position: absolute; bottom: 2px; width: 44px; height: 38px; fill: var(--accent); shape-rendering: crispEdges; transition: left .5s linear; animation: hop .4s ease-in-out infinite; }
 .runner .f1 { visibility: hidden; }
 .runner .f0 { animation: frameA .4s steps(1) infinite; }
 .runner .f1 { animation: frameB .4s steps(1) infinite; }
@@ -67,7 +67,7 @@ input { font: inherit; font-size: 16px; padding: 10px 12px; border: 1px solid va
 .opt-name { display: flex; flex-direction: column; font-weight: 700; }
 .opt-name small { font-weight: 400; font-size: 12px; color: var(--muted); }
 .opt .blocks { height: 28px; }
-.opt .track { height: 36px; }
+.opt .track { height: 44px; }
 
 .label { margin: 4px 0 0; font-size: 12px; color: var(--muted); }
 .big { margin: 0; font-size: 18px; word-break: break-word; }
