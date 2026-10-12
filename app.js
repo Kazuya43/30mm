@@ -5,6 +5,7 @@ const KEY_LOGS = "m30.logs";
 const KEY_CURRENT = "m30.current";
 const KEY_TASKS = "m30.tasks";
 const KEY_DISMISSED = "m30.resumeDismissed";
+const KEY_TODOS = "m30.todos";
 const MAX_TASKS = 30;
 let pipWin = null; // 小窓(Document Picture-in-Picture)のウィンドウ
 // 時計などを小窓へ移動している間も同じ id で取れるようにする
@@ -20,6 +21,9 @@ function save(key, value) {
 }
 const getLogs = () => load(KEY_LOGS, []);
 const setLogs = (l) => save(KEY_LOGS, l);
+// やることリスト: { id, task, goal, done, createdAt, doneAt }
+const getTodos = () => load(KEY_TODOS, []);
+const setTodos = (t) => save(KEY_TODOS, t);
 
 // 入力済みの「やること」候補(新しい順)。初回は既存ログから作る
 function getTasks() {
@@ -102,8 +106,10 @@ function renderTiles(container, tiles) {
 
 // ---- views ----
 function showView(name) {
-  ["timer", "log", "stats", "settings"].forEach((v) => { $(`view-${v}`).hidden = v !== name; });
+  ["timer", "list", "log", "stats", "settings"].forEach((v) => { $(`view-${v}`).hidden = v !== name; });
   document.querySelectorAll(".tab").forEach((b) => b.classList.toggle("active", b.dataset.view === name));
+  if (name === "timer" && !current) { renderTaskSuggestions(); renderResume(); renderFromList(); }
+  if (name === "list") renderTodos();
   if (name === "log") renderLog();
   if (name === "stats") renderStats();
   window.scrollTo(0, 0);
@@ -123,6 +129,7 @@ function render() {
   if (phase === "setup") {
     renderTaskSuggestions();
     renderResume();
+    renderFromList();
   } else if (phase === "running") {
     $("r-task").textContent = current.task;
     $("r-goal").textContent = current.goal;
@@ -135,6 +142,10 @@ function render() {
     $("e-goal").textContent = current.goal;
     rating = 0;
     $("note").value = "";
+    const todo = current.todoId && getTodos().find((t) => t.id === current.todoId && !t.done);
+    $("todo-done-wrap").hidden = !todo;
+    $("todo-done").checked = false;
+    if (todo) $("todo-done-name").textContent = todo.goal || todo.task;
     $("save").disabled = true;
     document.querySelectorAll("#stars button").forEach((b) => b.classList.remove("on"));
   }
@@ -370,6 +381,96 @@ function renderResume() {
   });
 }
 
+// ---- やることリスト ----
+let pendingTodo = null; // { id, task }
+
+function setTodoDone(id, done) {
+  setTodos(getTodos().map((t) => (t.id === id ? { ...t, done, doneAt: done ? Date.now() : null } : t)));
+}
+
+// リストの項目をタイマーの入力欄に入れる
+function useTodo(t) {
+  showView("timer");
+  if (current) return; // 計測中・評価中は入れない
+  $("task").value = t.task;
+  $("goal").value = t.goal || "";
+  pendingTodo = { id: t.id, task: t.task };
+  pendingContinue = null;
+  onTaskInput();
+  const target = t.goal ? $("setup").querySelector(".primary") : $("goal");
+  target.scrollIntoView({ behavior: reducedMotion() ? "auto" : "smooth", block: "center" });
+  target.focus({ preventScroll: true });
+}
+
+function renderFromList() {
+  const todos = getTodos().filter((t) => !t.done).slice(0, 5);
+  $("from-list").hidden = todos.length === 0;
+  const box = $("from-list-items");
+  box.innerHTML = "";
+  todos.forEach((t) => {
+    const b = el("button", "pick-item");
+    b.type = "button";
+    b.append(el("span", "pick-main", t.goal || t.task));
+    if (t.goal) b.append(el("span", "genre-tag", t.task));
+    b.addEventListener("click", () => useTodo(t));
+    box.append(b);
+  });
+}
+
+function todoRow(t) {
+  const li = el("li", `todo${t.done ? " done" : ""}`);
+  const check = document.createElement("input");
+  check.type = "checkbox";
+  check.checked = t.done;
+  check.setAttribute("aria-label", "完了");
+  check.addEventListener("change", () => { setTodoDone(t.id, check.checked); renderTodos(); });
+  const body = el("div", "todo-body");
+  body.append(el("div", "todo-main", t.goal || t.task));
+  if (t.goal) body.append(el("span", "genre-tag", t.task));
+  const actions = el("div", "todo-actions");
+  if (!t.done) {
+    const go = el("button", "go", "始める");
+    go.type = "button";
+    go.addEventListener("click", () => useTodo(t));
+    actions.append(go);
+  }
+  const del = el("button", "del", "削除");
+  del.type = "button";
+  twoTap(del, "削除", "もう一度", () => { setTodos(getTodos().filter((x) => x.id !== t.id)); renderTodos(); });
+  actions.append(del);
+  li.append(check, body, actions);
+  return li;
+}
+
+function renderTodos() {
+  const todos = getTodos();
+  const open = todos.filter((t) => !t.done);
+  const done = todos.filter((t) => t.done).sort((a, b) => b.doneAt - a.doneAt);
+  $("todos").innerHTML = "";
+  open.forEach((t) => $("todos").append(todoRow(t)));
+  $("todos-empty").hidden = open.length > 0;
+  $("done-box").hidden = done.length === 0;
+  $("done-count").textContent = done.length;
+  $("todos-done").innerHTML = "";
+  done.forEach((t) => $("todos-done").append(todoRow(t)));
+}
+
+$("todo-form").addEventListener("submit", (e) => {
+  e.preventDefault();
+  const task = normalizeTask($("todo-task").value), goal = $("todo-goal").value.trim();
+  if (!task) return;
+  setTodos([...getTodos(), { id: String(Date.now()), task, goal, done: false, createdAt: Date.now(), doneAt: null }]);
+  setTasks([task, ...getTasks().filter((t) => t !== task)]);
+  $("todo-task").value = ""; $("todo-goal").value = "";
+  $("todo-task").focus();
+  renderTodos();
+});
+
+twoTap($("clear-done"), "完了済みをすべて消す", "もう一度押すと消します", () => {
+  setTodos(getTodos().filter((t) => !t.done));
+  renderTodos();
+});
+
 // ---- timer actions ----
 $("setup").addEventListener("submit", (e) => {
   e.preventDefault();
@@ -379,7 +480,9 @@ $("setup").addEventListener("submit", (e) => {
   const now = Date.now();
   current = { task, goal, startedAt: now, endsAt: now + DURATION_MS };
   if (pendingContinue && pendingContinue.task === task) current.continuedFrom = pendingContinue.id;
+  if (pendingTodo && pendingTodo.task === task) current.todoId = pendingTodo.id;
   pendingContinue = null;
+  pendingTodo = null;
   save(KEY_CURRENT, current);
   $("task").value = ""; $("goal").value = "";
   onTaskInput();
@@ -398,6 +501,7 @@ $("stars").addEventListener("click", (e) => {
   rating = Number(b.dataset.v);
   document.querySelectorAll("#stars button").forEach((x) => x.classList.toggle("on", Number(x.dataset.v) <= rating));
   $("save").disabled = false;
+  if (!$("todo-done-wrap").hidden) $("todo-done").checked = rating === 5;
 });
 
 const PRAISE = { 5: "完璧!", 4: "いい感じ!", 3: "ナイス集中", 2: "一歩前進", 1: "まず始めたのがえらい" };
@@ -415,10 +519,12 @@ $("rating").addEventListener("submit", (e) => {
     minutes: Math.round((current.finishedAt - current.startedAt) / 60000),
     aborted: !!current.aborted,
     continuedFrom: current.continuedFrom || null,
+    todoId: current.todoId || null,
     rating,
     note: $("note").value.trim(),
   });
   setLogs(logs);
+  if (!$("todo-done-wrap").hidden && $("todo-done").checked) setTodoDone(current.todoId, true);
   if (pipWin) pipWin.close();
   const todays = logs.filter((l) => dateKey(l.startedAt) === dateKey(Date.now()));
   const mins = todays.reduce((s, l) => s + l.minutes, 0);

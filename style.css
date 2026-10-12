@@ -184,3 +184,23 @@ input { font: inherit; font-size: 16px; padding: 10px 12px; border: 1px solid va
   body[data-phase="running"] .progress { width: 100%; }
   body[data-phase="running"] .bar { height: 10px; }
 }
+
+/* やることリスト */
+.todos { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.todo { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; display: flex; align-items: center; gap: 12px; }
+.todo input[type="checkbox"] { width: 22px; height: 22px; flex: none; accent-color: var(--accent); }
+.todo-body { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
+.todo-main { font-weight: 700; word-break: break-word; }
+.todo.done .todo-main { color: var(--muted); text-decoration: line-through; font-weight: 400; }
+.todo-actions { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; flex: none; }
+.todo-actions .go { background: var(--accent); color: var(--accent-fg); border: 0; border-radius: 999px; padding: 6px 14px; font-size: 13px; font-weight: 700; }
+.todo-actions .del { background: none; border: 0; color: var(--muted); font-size: 12px; text-decoration: underline; padding: 2px 0; }
+#done-box summary { cursor: pointer; color: var(--muted); font-size: 14px; padding: 4px 0; }
+#done-box[open] summary { margin-bottom: 8px; }
+#done-box .ghost { margin-top: 10px; }
+#from-list { display: flex; flex-direction: column; gap: 6px; }
+#from-list .label { margin: 0; }
+.pick-list { display: flex; flex-direction: column; gap: 6px; padding-bottom: 6px; border-bottom: 1px solid var(--line); margin-bottom: 4px; }
+.pick-item { display: flex; align-items: center; gap: 8px; text-align: left; background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; color: var(--fg); min-width: 0; }
+.pick-main { flex: 1; min-width: 0; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pick-item .genre-tag { flex: none; max-width: 40%; }

@@ -30,6 +30,10 @@
     </div>
 
     <form id="setup" class="card">
+      <div id="from-list" hidden>
+        <p class="label">リストから選ぶ</p>
+        <div id="from-list-items" class="pick-list"></div>
+      </div>
       <label for="task">これからやること</label>
       <input id="task" list="task-list" required maxlength="100" placeholder="例: 企画書の構成を作る" autocomplete="off">
       <datalist id="task-list"></datalist>
@@ -73,8 +77,28 @@
       <p class="hint"><span>1 まったく</span><span>5 完璧</span></p>
       <label for="note">メモ(任意)</label>
       <input id="note" maxlength="200" placeholder="気づき・次にやること" autocomplete="off">
+      <label class="switch" for="todo-done" id="todo-done-wrap" hidden><input type="checkbox" id="todo-done"><span>リストの「<span id="todo-done-name"></span>」を完了にする</span></label>
       <button type="submit" class="primary" id="save" disabled>記録する</button>
     </form>
+  </section>
+
+  <!-- やることリスト -->
+  <section id="view-list" hidden>
+    <form id="todo-form" class="card">
+      <h2>やることリスト</h2>
+      <label for="todo-task">やること</label>
+      <input id="todo-task" list="task-list" required maxlength="100" placeholder="例: 企画書を書く" autocomplete="off">
+      <label for="todo-goal">目標(任意)</label>
+      <input id="todo-goal" maxlength="100" placeholder="例: 見出しを5つ決める" autocomplete="off">
+      <button type="submit" class="primary">リストに追加</button>
+    </form>
+    <ul id="todos" class="todos"></ul>
+    <p id="todos-empty" class="muted" hidden>まだ何もありません。思いついたことを書いておくと、タイマーを始めるときに選べます。</p>
+    <details id="done-box" hidden>
+      <summary>完了済み(<span id="done-count"></span>)</summary>
+      <ul id="todos-done" class="todos"></ul>
+      <button id="clear-done" class="ghost" type="button">完了済みをすべて消す</button>
+    </details>
   </section>
 
   <!-- ログ -->
@@ -147,6 +171,9 @@
 <nav class="tabbar">
   <button class="tab active" data-view="timer">
     <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5M9 2h6"/></svg>タイマー
+  </button>
+  <button class="tab" data-view="list">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8 12l3 3 5-6"/></svg>リスト
   </button>
   <button class="tab" data-view="log">
     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01"/></svg>ログ
