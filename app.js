@@ -142,10 +142,6 @@ function render() {
     $("e-goal").textContent = current.goal;
     rating = 0;
     $("note").value = "";
-    const todo = current.todoId && getTodos().find((t) => t.id === current.todoId && !t.done);
-    $("todo-done-wrap").hidden = !todo;
-    $("todo-done").checked = false;
-    if (todo) $("todo-done-name").textContent = todo.goal || todo.task;
     $("save").disabled = true;
     document.querySelectorAll("#stars button").forEach((b) => b.classList.remove("on"));
   }
@@ -417,16 +413,17 @@ function renderFromList() {
   });
 }
 
-function todoRow(t) {
+function todoRow(t, logs) {
   const li = el("li", `todo${t.done ? " done" : ""}`);
-  const check = document.createElement("input");
-  check.type = "checkbox";
-  check.checked = t.done;
-  check.setAttribute("aria-label", "完了");
-  check.addEventListener("change", () => { setTodoDone(t.id, check.checked); renderTodos(); });
   const body = el("div", "todo-body");
   body.append(el("div", "todo-main", t.goal || t.task));
-  if (t.goal) body.append(el("span", "genre-tag", t.task));
+  const tags = el("div", "tags");
+  if (t.goal) tags.append(el("span", "genre-tag", t.task));
+  // この項目から始めた直近の記録の達成度
+  const last = logs.filter((l) => l.todoId === t.id).sort((a, b) => b.startedAt - a.startedAt)[0];
+  if (t.done) tags.append(el("span", "meta", "達成 5/5"));
+  else if (last) tags.append(el("span", "meta", `前回 ${last.rating}/5`));
+  body.append(tags);
   const actions = el("div", "todo-actions");
   if (!t.done) {
     const go = el("button", "go", "始める");
@@ -438,21 +435,21 @@ function todoRow(t) {
   del.type = "button";
   twoTap(del, "削除", "もう一度", () => { setTodos(getTodos().filter((x) => x.id !== t.id)); renderTodos(); });
   actions.append(del);
-  li.append(check, body, actions);
+  li.append(body, actions);
   return li;
 }
 
 function renderTodos() {
-  const todos = getTodos();
+  const todos = getTodos(), logs = getLogs();
   const open = todos.filter((t) => !t.done);
   const done = todos.filter((t) => t.done).sort((a, b) => b.doneAt - a.doneAt);
   $("todos").innerHTML = "";
-  open.forEach((t) => $("todos").append(todoRow(t)));
+  open.forEach((t) => $("todos").append(todoRow(t, logs)));
   $("todos-empty").hidden = open.length > 0;
   $("done-box").hidden = done.length === 0;
   $("done-count").textContent = done.length;
   $("todos-done").innerHTML = "";
-  done.forEach((t) => $("todos-done").append(todoRow(t)));
+  done.forEach((t) => $("todos-done").append(todoRow(t, logs)));
 }
 
 $("todo-form").addEventListener("submit", (e) => {
@@ -466,7 +463,7 @@ $("todo-form").addEventListener("submit", (e) => {
   renderTodos();
 });
 
-twoTap($("clear-done"), "完了済みをすべて消す", "もう一度押すと消します", () => {
+twoTap($("clear-done"), "達成済みをすべて消す", "もう一度押すと消します", () => {
   setTodos(getTodos().filter((t) => !t.done));
   renderTodos();
 });
@@ -501,7 +498,6 @@ $("stars").addEventListener("click", (e) => {
   rating = Number(b.dataset.v);
   document.querySelectorAll("#stars button").forEach((x) => x.classList.toggle("on", Number(x.dataset.v) <= rating));
   $("save").disabled = false;
-  if (!$("todo-done-wrap").hidden) $("todo-done").checked = rating === 5;
 });
 
 const PRAISE = { 5: "完璧!", 4: "いい感じ!", 3: "ナイス集中", 2: "一歩前進", 1: "まず始めたのがえらい" };
@@ -524,7 +520,8 @@ $("rating").addEventListener("submit", (e) => {
     note: $("note").value.trim(),
   });
   setLogs(logs);
-  if (!$("todo-done-wrap").hidden && $("todo-done").checked) setTodoDone(current.todoId, true);
+  // リストから始めた回は、達成度5で達成済みにする
+  if (current.todoId && rating === 5) setTodoDone(current.todoId, true);
   if (pipWin) pipWin.close();
   const todays = logs.filter((l) => dateKey(l.startedAt) === dateKey(Date.now()));
   const mins = todays.reduce((s, l) => s + l.minutes, 0);

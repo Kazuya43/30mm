@@ -77,7 +77,6 @@
       <p class="hint"><span>1 まったく</span><span>5 完璧</span></p>
       <label for="note">メモ(任意)</label>
       <input id="note" maxlength="200" placeholder="気づき・次にやること" autocomplete="off">
-      <label class="switch" for="todo-done" id="todo-done-wrap" hidden><input type="checkbox" id="todo-done"><span>リストの「<span id="todo-done-name"></span>」を完了にする</span></label>
       <button type="submit" class="primary" id="save" disabled>記録する</button>
     </form>
   </section>
@@ -95,9 +94,9 @@
     <ul id="todos" class="todos"></ul>
     <p id="todos-empty" class="muted" hidden>まだ何もありません。思いついたことを書いておくと、タイマーを始めるときに選べます。</p>
     <details id="done-box" hidden>
-      <summary>完了済み(<span id="done-count"></span>)</summary>
+      <summary>達成済み(<span id="done-count"></span>)</summary>
       <ul id="todos-done" class="todos"></ul>
-      <button id="clear-done" class="ghost" type="button">完了済みをすべて消す</button>
+      <button id="clear-done" class="ghost" type="button">達成済みをすべて消す</button>
     </details>
   </section>
 
