@@ -302,8 +302,8 @@ function renderLog() {
   items.forEach((l) => {
     const li = el("li", "entry");
     li.append(el("div", "time", `${hhmm(l.startedAt)}–${hhmm(l.finishedAt)}(${l.minutes}分${l.aborted ? "・中断" : ""})`));
-    li.append(el("div", "t", l.task));
-    li.append(el("div", "g", `目標: ${l.goal}`));
+    li.append(el("div", "goal", l.goal));
+    li.append(el("div", "genre-tag", l.task));
     if (l.note) li.append(el("div", "n", `メモ: ${l.note}`));
     const score = el("div", "score", String(l.rating));
     score.append(el("small", null, "/5"));

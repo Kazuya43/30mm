@@ -60,8 +60,9 @@ input { font: inherit; font-size: 16px; padding: 10px 12px; border: 1px solid va
 .entry .time { font-size: 12px; color: var(--muted); }
 .entry .score { grid-column: 2; grid-row: 1 / span 3; align-self: center; font-family: var(--clock); font-size: 28px; color: var(--accent); }
 .entry .score small { font-size: 12px; color: var(--muted); }
-.entry .t { font-weight: 700; word-break: break-word; }
-.entry .g, .entry .n { font-size: 14px; color: var(--muted); word-break: break-word; }
+.entry .goal { font-size: 20px; font-weight: 700; line-height: 1.35; word-break: break-word; margin: 2px 0; }
+.entry .genre-tag { justify-self: start; max-width: 100%; font-size: 12px; color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: 1px 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.entry .n { font-size: 14px; color: var(--muted); word-break: break-word; }
 .entry .del { justify-self: start; background: none; border: 0; color: var(--muted); font-size: 12px; padding: 2px 0 0; text-decoration: underline; }
 .tools { text-align: center; }
 
