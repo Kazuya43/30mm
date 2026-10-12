@@ -112,9 +112,16 @@ $("setup").addEventListener("submit", (e) => {
   render();
 });
 
-$("abort").addEventListener("click", () => {
-  if (confirm("中断して、ここまでの達成度を記録しますか?")) finish(true);
-});
+// confirm() が使えない環境でも動くよう、2回押しで確定する
+function twoTap(btn, idleText, armedText, action) {
+  let timer = null;
+  btn.addEventListener("click", () => {
+    if (timer) { clearTimeout(timer); timer = null; btn.textContent = idleText; action(); return; }
+    btn.textContent = armedText;
+    timer = setTimeout(() => { timer = null; btn.textContent = idleText; }, 3000);
+  });
+}
+twoTap($("abort"), "中断する", "もう一度押すと中断して評価へ", () => finish(true));
 
 $("stars").addEventListener("click", (e) => {
   const b = e.target.closest("button");
@@ -178,8 +185,7 @@ function renderLog() {
     li.append(score);
     const del = document.createElement("button");
     del.className = "del"; del.textContent = "削除";
-    del.addEventListener("click", () => {
-      if (!confirm("この記録を削除しますか?")) return;
+    twoTap(del, "削除", "もう一度押すと削除", () => {
       setLogs(getLogs().filter((x) => x.id !== l.id));
       renderLog();
     });

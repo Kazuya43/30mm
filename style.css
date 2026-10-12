@@ -3,8 +3,9 @@
   --accent: #e8543a; --accent-fg: #fff;
 }
 @media (prefers-color-scheme: dark) {
-  :root { --bg: #151514; --fg: #ecebe6; --muted: #918e85; --card: #20201e; --line: #34332f; }
+  :root:not([data-theme="light"]) { --bg: #151514; --fg: #ecebe6; --muted: #918e85; --card: #20201e; --line: #34332f; color-scheme: dark; }
 }
+:root[data-theme="dark"] { --bg: #151514; --fg: #ecebe6; --muted: #918e85; --card: #20201e; --line: #34332f; color-scheme: dark; }
 * { box-sizing: border-box; }
 body { margin: 0; background: var(--bg); color: var(--fg);
   font: 16px/1.5 -apple-system, "Hiragino Sans", "Noto Sans JP", system-ui, sans-serif; }
