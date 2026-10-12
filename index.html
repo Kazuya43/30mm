@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>30mm 30分タイマー</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main>
+  <header>
+    <h1>30mm</h1>
+    <nav>
+      <button class="tab active" data-view="timer">タイマー</button>
+      <button class="tab" data-view="log">ログ</button>
+    </nav>
+  </header>
+
+  <!-- タイマー画面 -->
+  <section id="view-timer">
+    <!-- 開始前 -->
+    <form id="setup" class="card">
+      <label>これからやること
+        <input id="task" required maxlength="100" placeholder="例: 企画書の構成を作る" autocomplete="off">
+      </label>
+      <label>30分での目標
+        <input id="goal" required maxlength="100" placeholder="例: 見出しを5つ決める" autocomplete="off">
+      </label>
+      <button type="submit" class="primary">30分スタート</button>
+    </form>
+
+    <!-- 計測中 -->
+    <div id="running" class="card" hidden>
+      <div class="clock" id="clock">30:00</div>
+      <div class="bar"><div id="bar-fill"></div></div>
+      <p class="label">やること</p><p id="r-task" class="big"></p>
+      <p class="label">目標</p><p id="r-goal" class="big"></p>
+      <button id="abort" class="ghost">中断する</button>
+    </div>
+
+    <!-- 評価 -->
+    <form id="rating" class="card" hidden>
+      <h2 id="rt-title">おつかれさま!</h2>
+      <p class="label">やること</p><p id="e-task" class="big"></p>
+      <p class="label">目標</p><p id="e-goal" class="big"></p>
+      <p class="label">達成度は?</p>
+      <div class="stars" id="stars" role="radiogroup" aria-label="達成度">
+        <button type="button" data-v="1">1</button>
+        <button type="button" data-v="2">2</button>
+        <button type="button" data-v="3">3</button>
+        <button type="button" data-v="4">4</button>
+        <button type="button" data-v="5">5</button>
+      </div>
+      <p class="hint"><span>1 まったく</span><span>5 完璧</span></p>
+      <label>ひとこと(任意)
+        <input id="note" maxlength="200" placeholder="気づき・次にやること" autocomplete="off">
+      </label>
+      <button type="submit" class="primary" id="save" disabled>記録する</button>
+    </form>
+  </section>
+
+  <!-- ログ画面 -->
+  <section id="view-log" hidden>
+    <div class="daynav">
+      <button id="prev" aria-label="前の日">‹</button>
+      <input type="date" id="day">
+      <button id="next" aria-label="次の日">›</button>
+      <button id="today" class="ghost">今日</button>
+    </div>
+    <div class="summary" id="summary"></div>
+    <ol id="entries"></ol>
+    <p id="empty" class="hint" hidden>この日の記録はありません。</p>
+    <div class="tools">
+      <button id="export" class="ghost">JSONで書き出す</button>
+    </div>
+  </section>
+</main>
+<script src="app.js"></script>
+</body>
+</html>
