@@ -57,12 +57,23 @@ input { font: inherit; font-size: 16px; padding: 10px 12px; border: 1px solid va
 #entries { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
 .entry { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; }
 .entry > * { grid-column: 1; min-width: 0; }
-.entry .time { font-size: 12px; color: var(--muted); }
 .entry .score { grid-column: 2; grid-row: 1 / span 3; align-self: center; font-family: var(--clock); font-size: 28px; color: var(--accent); }
 .entry .score small { font-size: 12px; color: var(--muted); }
 .entry .goal { font-size: 20px; font-weight: 700; line-height: 1.35; word-break: break-word; margin: 2px 0; }
-.entry .genre-tag { justify-self: start; max-width: 100%; font-size: 12px; color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: 1px 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.entry .n { font-size: 14px; color: var(--muted); word-break: break-word; }
+.tags { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; min-width: 0; }
+.tags .meta { font-size: 12px; color: var(--muted); }
+.genre-tag { max-width: 100%; font-size: 12px; color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: 1px 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.entry .n, .resume-item .n { font-size: 14px; color: var(--muted); word-break: break-word; }
+
+/* 続きから */
+#resume-list { display: flex; flex-direction: column; gap: 10px; }
+.resume-item { display: flex; gap: 10px; align-items: center; padding-top: 10px; border-top: 1px solid var(--line); }
+.resume-item:first-child { border-top: 0; padding-top: 0; }
+.resume-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.resume-body .goal { font-size: 17px; font-weight: 700; line-height: 1.35; word-break: break-word; }
+.resume-actions { display: flex; align-items: center; gap: 2px; flex: none; }
+.resume-actions .go { background: var(--accent); color: var(--accent-fg); border: 0; border-radius: 999px; padding: 8px 14px; font-size: 14px; font-weight: 700; white-space: nowrap; }
+.resume-actions .x { background: none; border: 0; color: var(--muted); padding: 8px; font-size: 15px; }
 .entry .del { justify-self: start; background: none; border: 0; color: var(--muted); font-size: 12px; padding: 2px 0 0; text-decoration: underline; }
 .tools { text-align: center; }
 

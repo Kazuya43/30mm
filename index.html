@@ -15,6 +15,12 @@
 
   <!-- タイマー -->
   <section id="view-timer">
+    <div id="resume" class="card" hidden>
+      <h2>続きから</h2>
+      <p class="sub">達成度5に届かなかったテーマ</p>
+      <div id="resume-list"></div>
+    </div>
+
     <form id="setup" class="card">
       <label for="task">これからやること</label>
       <input id="task" list="task-list" required maxlength="100" placeholder="例: 企画書の構成を作る" autocomplete="off">

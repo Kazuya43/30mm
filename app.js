@@ -4,6 +4,7 @@ const DURATION_MS = 30 * 60 * 1000;
 const KEY_LOGS = "m30.logs";
 const KEY_CURRENT = "m30.current";
 const KEY_TASKS = "m30.tasks";
+const KEY_DISMISSED = "m30.resumeDismissed";
 const MAX_TASKS = 30;
 const $ = (id) => document.getElementById(id);
 const reducedMotion = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -110,12 +111,14 @@ document.querySelectorAll(".tab").forEach((b) => b.addEventListener("click", () 
 function render() {
   const phase = !current ? "setup" : current.finishedAt ? "rating" : "running";
   $("setup").hidden = phase !== "setup";
+  $("resume").hidden = true;
   $("running").hidden = phase !== "running";
   $("rating").hidden = phase !== "rating";
   clearInterval(tick);
   document.title = "30mm 30分タイマー";
   if (phase === "setup") {
     renderTaskSuggestions();
+    renderResume();
   } else if (phase === "running") {
     $("r-task").textContent = current.task;
     $("r-goal").textContent = current.goal;
@@ -188,6 +191,61 @@ function onTaskInput() {
 }
 $("task").addEventListener("input", onTaskInput);
 
+// ---- 続きから ----
+// テーマ(やること)ごとの最新記録が5未満なら、続きの候補に出す
+let pendingContinue = null; // { id, task }
+
+function resumeCandidates() {
+  const dismissed = load(KEY_DISMISSED, []);
+  const latest = new Map();
+  getLogs().forEach((l) => {
+    const p = latest.get(l.task);
+    if (!p || l.startedAt > p.startedAt) latest.set(l.task, l);
+  });
+  return [...latest.values()]
+    .filter((l) => l.rating < 5 && !dismissed.includes(l.id))
+    .sort((a, b) => b.startedAt - a.startedAt)
+    .slice(0, 3);
+}
+
+function renderResume() {
+  const items = resumeCandidates();
+  $("resume").hidden = items.length === 0;
+  const box = $("resume-list");
+  box.innerHTML = "";
+  items.forEach((l) => {
+    const row = el("div", "resume-item");
+    const body = el("div", "resume-body");
+    body.append(el("div", "goal", l.goal));
+    const meta = el("div", "tags");
+    meta.append(el("span", "genre-tag", l.task), el("span", "meta", `達成度 ${l.rating}/5`));
+    body.append(meta);
+    if (l.note) body.append(el("div", "n", `メモ: ${l.note}`));
+    const actions = el("div", "resume-actions");
+    const go = el("button", "go", "続きから");
+    go.type = "button";
+    go.addEventListener("click", () => {
+      $("task").value = l.task;
+      $("goal").value = l.goal;
+      pendingContinue = { id: l.id, task: l.task };
+      onTaskInput();
+      const start = $("setup").querySelector(".primary");
+      start.scrollIntoView({ behavior: reducedMotion() ? "auto" : "smooth", block: "center" });
+      start.focus({ preventScroll: true });
+    });
+    const x = el("button", "x", "×");
+    x.type = "button";
+    x.setAttribute("aria-label", "この候補を消す");
+    x.addEventListener("click", () => {
+      save(KEY_DISMISSED, [...load(KEY_DISMISSED, []), l.id].slice(-100));
+      renderResume();
+    });
+    actions.append(go, x);
+    row.append(body, actions);
+    box.append(row);
+  });
+}
+
 // ---- timer actions ----
 $("setup").addEventListener("submit", (e) => {
   e.preventDefault();
@@ -196,6 +254,8 @@ $("setup").addEventListener("submit", (e) => {
   setTasks([task, ...getTasks().filter((t) => t !== task)]);
   const now = Date.now();
   current = { task, goal, startedAt: now, endsAt: now + DURATION_MS };
+  if (pendingContinue && pendingContinue.task === task) current.continuedFrom = pendingContinue.id;
+  pendingContinue = null;
   save(KEY_CURRENT, current);
   $("task").value = ""; $("goal").value = "";
   onTaskInput();
@@ -229,6 +289,7 @@ $("rating").addEventListener("submit", (e) => {
     finishedAt: current.finishedAt,
     minutes: Math.round((current.finishedAt - current.startedAt) / 60000),
     aborted: !!current.aborted,
+    continuedFrom: current.continuedFrom || null,
     rating,
     note: $("note").value.trim(),
   });
@@ -301,9 +362,12 @@ function renderLog() {
   ol.innerHTML = "";
   items.forEach((l) => {
     const li = el("li", "entry");
-    li.append(el("div", "time", `${hhmm(l.startedAt)}–${hhmm(l.finishedAt)}(${l.minutes}分${l.aborted ? "・中断" : ""})`));
     li.append(el("div", "goal", l.goal));
-    li.append(el("div", "genre-tag", l.task));
+    const tags = el("div", "tags");
+    tags.append(el("span", "genre-tag", l.task));
+    if (l.continuedFrom) tags.append(el("span", "meta", "続き"));
+    if (l.aborted) tags.append(el("span", "meta", `中断・${l.minutes}分`));
+    li.append(tags);
     if (l.note) li.append(el("div", "n", `メモ: ${l.note}`));
     const score = el("div", "score", String(l.rating));
     score.append(el("small", null, "/5"));
