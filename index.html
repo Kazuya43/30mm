@@ -31,7 +31,20 @@
 
     <div id="running" class="card" hidden>
       <div class="clock" id="clock">30:00</div>
-      <div class="bar"><div id="bar-fill"></div></div>
+      <div id="progress" class="progress" data-style="bar">
+        <div class="bar"><div id="bar-fill"></div></div>
+        <div class="blocks" id="blocks"></div>
+        <div class="track">
+          <div class="trail" id="trail"></div>
+          <svg class="runner" id="runner" viewBox="0 0 12 12" aria-hidden="true"></svg>
+          <svg class="flag" viewBox="0 0 12 12" aria-hidden="true"><rect x="2" y="1" width="1" height="11"/><path d="M3 1h7l-2 2.5 2 2.5H3z"/></svg>
+        </div>
+      </div>
+      <div class="seg" id="style-seg" role="radiogroup" aria-label="進み方の表示">
+        <button type="button" data-style="bar">バー</button>
+        <button type="button" data-style="blocks">ブロック</button>
+        <button type="button" data-style="runner">ランナー</button>
+      </div>
       <p class="label">やること</p><p id="r-task" class="big"></p>
       <p class="label">目標</p><p id="r-goal" class="big"></p>
       <button id="abort" class="ghost">中断する</button>
@@ -50,7 +63,7 @@
         <button type="button" data-v="5">5</button>
       </div>
       <p class="hint"><span>1 まったく</span><span>5 完璧</span></p>
-      <label for="note">ひとこと(任意)</label>
+      <label for="note">メモ(任意)</label>
       <input id="note" maxlength="200" placeholder="気づき・次にやること" autocomplete="off">
       <button type="submit" class="primary" id="save" disabled>記録する</button>
     </form>

@@ -38,6 +38,30 @@ input { font: inherit; font-size: 16px; padding: 10px 12px; border: 1px solid va
 .clock { font-family: var(--clock); font-weight: 800; font-size: clamp(64px, 22vw, 104px); line-height: 1.1; text-align: center; font-variant-numeric: tabular-nums; letter-spacing: -.02em; }
 .bar { height: 8px; background: var(--grid); border-radius: 4px; overflow: hidden; }
 #bar-fill { height: 100%; width: 0; background: var(--accent); transition: width .5s linear; }
+
+/* 進み方の表示 */
+.progress > * { display: none; }
+.progress[data-style="bar"] .bar, .progress[data-style="blocks"] .blocks, .progress[data-style="runner"] .track { display: flex; }
+.progress[data-style="bar"] .bar { display: block; }
+.blocks { gap: 3px; height: 40px; }
+.blocks span { flex: 1; border-radius: 2px; background: var(--grid); transition: background .3s; }
+.blocks span.on { background: var(--fg); }
+.blocks span.blink { animation: blink 1s steps(1) infinite; }
+@keyframes blink { 50% { background: var(--grid); } }
+.track { position: relative; height: 44px; border-bottom: 2px dashed var(--line); }
+.trail { position: absolute; left: 0; bottom: -2px; height: 2px; background: var(--accent); }
+.runner { position: absolute; bottom: 2px; width: 36px; height: 36px; fill: var(--accent); shape-rendering: crispEdges; transition: left .5s linear; animation: hop .4s ease-in-out infinite; }
+.runner .f1 { visibility: hidden; }
+.runner .f0 { animation: frameA .4s steps(1) infinite; }
+.runner .f1 { animation: frameB .4s steps(1) infinite; }
+@keyframes frameA { 50% { visibility: hidden; } }
+@keyframes frameB { 0% { visibility: hidden; } 50% { visibility: visible; } }
+@keyframes hop { 50% { transform: translateY(-2px); } }
+.flag { position: absolute; right: 0; bottom: 2px; width: 28px; height: 28px; fill: var(--muted); shape-rendering: crispEdges; }
+.seg { display: flex; gap: 4px; align-self: center; background: var(--bg); border: 1px solid var(--line); border-radius: 999px; padding: 3px; }
+.seg button { background: none; border: 0; border-radius: 999px; padding: 4px 12px; font-size: 12px; color: var(--muted); }
+.seg button.on { background: var(--fg); color: var(--bg); font-weight: 700; }
+
 .label { margin: 4px 0 0; font-size: 12px; color: var(--muted); }
 .big { margin: 0; font-size: 18px; word-break: break-word; }
 .stars { display: flex; gap: 8px; }

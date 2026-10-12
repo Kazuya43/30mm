@@ -139,9 +139,51 @@ function update() {
   const left = current.endsAt - Date.now();
   if (left <= 0) return finish(false);
   $("clock").textContent = fmt(left);
-  $("bar-fill").style.width = `${((DURATION_MS - left) / DURATION_MS) * 100}%`;
+  const p = (DURATION_MS - left) / DURATION_MS;
+  $("bar-fill").style.width = `${p * 100}%`;
+  updateBlocks(Math.ceil(left / 60000));
+  $("runner").style.left = `calc(${p} * (100% - 40px))`;
+  $("trail").style.width = `calc(${p} * (100% - 40px) + 6px)`;
   document.title = `${fmt(left)} ・ ${current.task}`;
 }
+
+// ---- 進み方の表示(バー / ブロック / ランナー) ----
+const KEY_STYLE = "m30.progressStyle";
+const BLOCKS = 30; // 1ブロック = 1分
+
+function setProgressStyle(style) {
+  $("progress").dataset.style = style;
+  document.querySelectorAll("#style-seg button").forEach((b) => b.classList.toggle("on", b.dataset.style === style));
+  save(KEY_STYLE, style);
+}
+$("style-seg").addEventListener("click", (e) => {
+  const b = e.target.closest("button");
+  if (b) setProgressStyle(b.dataset.style);
+});
+
+// 残り分数ぶんのブロックが点灯し、いま消えかけている1つが点滅する
+for (let i = 0; i < BLOCKS; i++) $("blocks").append(el("span"));
+let shownBlocks = -1;
+function updateBlocks(remaining) {
+  if (remaining === shownBlocks) return;
+  shownBlocks = remaining;
+  [...$("blocks").children].forEach((b, i) => {
+    b.className = i < remaining - 1 ? "on" : i === remaining - 1 ? "on blink" : "";
+  });
+}
+
+// ドット絵のランナー(2コマで足を動かす)
+const RUNNER_FRAMES = [
+  ["....###.....", "....###.....", "....###.....", ".....#......", "...#####....", "..#.###.#...",
+   "....###.....", "....#.#.....", "...#...#....", "..#.....#...", ".#.......#..", "............"],
+  ["....###.....", "....###.....", "....###.....", ".....#......", "....###.....", "...####.....",
+   "....###.#...", ".....#......", ".....##.....", "....#..#....", "....#...#...", "............"],
+];
+$("runner").innerHTML = RUNNER_FRAMES.map((rows, f) =>
+  `<g class="f${f}">${rows.map((r, y) => [...r].map((c, x) => (c === "#" ? `<rect x="${x}" y="${y}" width="1" height="1"/>` : "")).join("")).join("")}</g>`
+).join("");
+
+setProgressStyle(load(KEY_STYLE, "bar"));
 
 function finish(aborted) {
   current.finishedAt = aborted ? Date.now() : current.endsAt;
