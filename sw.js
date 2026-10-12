@@ -1,6 +1,6 @@
 // オフラインでも開けるよう、アプリ本体をキャッシュする
 // ファイルを更新したら VERSION を上げる
-const VERSION = "30mm-v1";
+const VERSION = "30mm-v2";
 const APP_SHELL = [
   "./",
   "index.html",

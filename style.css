@@ -150,3 +150,12 @@ input { font: inherit; font-size: 16px; padding: 10px 12px; border: 1px solid va
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
+
+/* 小窓表示 */
+.actions { display: flex; gap: 8px; }
+.actions button { flex: 1; }
+.switch { display: flex; align-items: center; gap: 10px; color: var(--fg); font-size: 15px; cursor: pointer; }
+.switch input { width: 20px; height: 20px; accent-color: var(--accent); }
+.pip { min-height: 100vh; display: flex; flex-direction: column; justify-content: center; gap: 8px; padding: 12px 16px; }
+.pip-goal { font-size: 13px; font-weight: 700; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pip .clock { font-size: clamp(40px, 22vw, 96px); }

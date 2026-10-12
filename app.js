@@ -6,7 +6,9 @@ const KEY_CURRENT = "m30.current";
 const KEY_TASKS = "m30.tasks";
 const KEY_DISMISSED = "m30.resumeDismissed";
 const MAX_TASKS = 30;
-const $ = (id) => document.getElementById(id);
+let pipWin = null; // 小窓(Document Picture-in-Picture)のウィンドウ
+// 時計などを小窓へ移動している間も同じ id で取れるようにする
+const $ = (id) => document.getElementById(id) || (pipWin && pipWin.document.getElementById(id));
 const reducedMotion = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 // ---- storage ----
@@ -224,8 +226,67 @@ function finish(aborted) {
       }
     } catch { /* ignore */ }
   }
+  if (pipWin) {
+    if (aborted) pipWin.close();
+    else showPipDone();
+  }
   render();
 }
+
+// ---- 小窓表示(PC の Chrome / Edge) ----
+const KEY_PIP_AUTO = "m30.pipAuto";
+const canPip = "documentPictureInPicture" in window && window.top === window; // 埋め込み表示では使えない
+
+async function openPip() {
+  if (!canPip || pipWin || !current || current.finishedAt) return;
+  try {
+    pipWin = await documentPictureInPicture.requestWindow({ width: 320, height: 210 });
+  } catch { pipWin = null; return; }
+  const d = pipWin.document;
+  d.documentElement.lang = "ja";
+  if (document.documentElement.dataset.theme) d.documentElement.dataset.theme = document.documentElement.dataset.theme;
+  [...document.styleSheets].forEach((ss) => {
+    try {
+      const s = d.createElement("style");
+      s.textContent = [...ss.cssRules].map((r) => r.cssText).join("\n");
+      d.head.append(s);
+    } catch {
+      if (ss.href) { const l = d.createElement("link"); l.rel = "stylesheet"; l.href = ss.href; d.head.append(l); }
+    }
+  });
+  const wrap = el("div", "pip");
+  const goal = el("div", "pip-goal", current.goal);
+  goal.id = "pip-goal";
+  const back = el("button", "primary", "評価する");
+  back.id = "pip-back";
+  back.hidden = true;
+  back.addEventListener("click", () => { window.focus(); pipWin && pipWin.close(); });
+  wrap.append(goal, $("clock"), $("progress"), back);
+  d.body.append(wrap);
+  $("pip").hidden = true;
+  // 閉じたら時計と進み方の表示を元の画面へ戻す
+  pipWin.addEventListener("pagehide", () => {
+    const clock = $("clock"), prog = $("progress"), running = document.getElementById("running");
+    prog.hidden = false;
+    running.prepend(prog);
+    running.prepend(clock);
+    pipWin = null;
+    $("pip").hidden = !canPip;
+  });
+}
+
+function showPipDone() {
+  $("pip-goal").textContent = "30分経過! おつかれさま";
+  $("clock").textContent = "00:00";
+  $("progress").hidden = true;
+  $("pip-back").hidden = false;
+}
+
+$("pip").hidden = !canPip;
+$("pip").addEventListener("click", openPip);
+$("pip-settings").hidden = !canPip;
+$("pip-auto").checked = load(KEY_PIP_AUTO, false);
+$("pip-auto").addEventListener("change", (e) => save(KEY_PIP_AUTO, e.target.checked));
 
 // ---- 「やること」の候補 ----
 function lastGoalFor(task) {
@@ -321,10 +382,11 @@ $("setup").addEventListener("submit", (e) => {
   save(KEY_CURRENT, current);
   $("task").value = ""; $("goal").value = "";
   onTaskInput();
+  render();
+  if (load(KEY_PIP_AUTO, false)) openPip(); // スタートのクリック操作中に開く必要がある
   try {
     if ("Notification" in window && Notification.permission === "default") Notification.requestPermission();
   } catch { /* ignore */ }
-  render();
 });
 
 twoTap($("abort"), "中断する", "もう一度押すと中断して評価へ", () => finish(true));
@@ -356,6 +418,7 @@ $("rating").addEventListener("submit", (e) => {
     note: $("note").value.trim(),
   });
   setLogs(logs);
+  if (pipWin) pipWin.close();
   const todays = logs.filter((l) => dateKey(l.startedAt) === dateKey(Date.now()));
   const mins = todays.reduce((s, l) => s + l.minutes, 0);
   celebrate(rating, PRAISE[rating], `今日 ${todays.length}本目・合計 ${mins}分`);
