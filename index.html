@@ -35,12 +35,13 @@
         <div id="from-list-items" class="pick-list"></div>
       </div>
       <label for="task">これからやること</label>
-      <input id="task" list="task-list" required maxlength="100" placeholder="例: 企画書の構成を作る" autocomplete="off">
+      <input id="task" list="task-list" maxlength="100" placeholder="例: 企画書の構成を作る" autocomplete="off">
       <datalist id="task-list"></datalist>
       <div id="recent" class="chips" aria-label="前に入力したやること"></div>
       <label for="goal">30分での目標</label>
-      <input id="goal" required maxlength="100" placeholder="例: 見出しを5つ決める" autocomplete="off">
+      <input id="goal" maxlength="100" placeholder="例: 見出しを5つ決める" autocomplete="off">
       <button type="submit" class="primary">30分スタート</button>
+      <p class="muted center">空欄のままでもスタートできます。あとから記録するときに書けます。</p>
     </form>
 
     <div id="running" class="card" hidden>
@@ -65,7 +66,9 @@
     <form id="rating" class="card" hidden>
       <h2 id="rt-title">おつかれさま!</h2>
       <p class="label">やること</p><p id="e-task" class="big"></p>
+      <input id="fill-task" list="task-list" maxlength="100" placeholder="何をやった?(任意)" autocomplete="off" hidden>
       <p class="label">目標</p><p id="e-goal" class="big"></p>
+      <input id="fill-goal" maxlength="100" placeholder="目標・やれたこと(任意)" autocomplete="off" hidden>
       <p class="label">達成度は?</p>
       <div class="stars" id="stars" role="radiogroup" aria-label="達成度">
         <button type="button" data-v="1">1</button>

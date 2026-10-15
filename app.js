@@ -54,6 +54,8 @@ function dateKey(ts) {
 const hhmm = (ts) => { const d = new Date(ts); return `${pad(d.getHours())}:${pad(d.getMinutes())}`; };
 const fmt = (ms) => { const s = Math.max(0, Math.ceil(ms / 1000)); return `${pad(Math.floor(s / 60))}:${pad(s % 60)}`; };
 const WD = ["日", "月", "火", "水", "木", "金", "土"];
+const UNSORTED = "未分類"; // やることを書かずに記録したときのジャンル名
+const goalText = (g) => g || "目標なし";
 const avgOf = (items) => (items.length ? items.reduce((s, l) => s + l.rating, 0) / items.length : null);
 const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
 
@@ -131,15 +133,23 @@ function render() {
     renderResume();
     renderFromList();
   } else if (phase === "running") {
-    $("r-task").textContent = current.task;
-    $("r-goal").textContent = current.goal;
+    // 空欄でスタートした項目は表示しない
+    [["r-task", current.task], ["r-goal", current.goal]].forEach(([id, v]) => {
+      $(id).textContent = v;
+      $(id).hidden = $(id).previousElementSibling.hidden = !v;
+    });
     update();
     tick = setInterval(update, 250);
     keepAwake(true);
   } else {
     $("rt-title").textContent = current.aborted ? "中断しました" : "30分おつかれさま!";
-    $("e-task").textContent = current.task;
-    $("e-goal").textContent = current.goal;
+    // 空欄でスタートした項目は、ここで書けるようにする
+    [["e-task", "fill-task", current.task], ["e-goal", "fill-goal", current.goal]].forEach(([id, input, v]) => {
+      $(id).textContent = v;
+      $(id).hidden = !v;
+      $(input).hidden = !!v;
+      $(input).value = "";
+    });
     rating = 0;
     $("note").value = "";
     $("save").disabled = true;
@@ -156,7 +166,7 @@ function update() {
   updateBlocks(Math.ceil(left / 60000));
   $("runner").style.left = `calc(${p} * (100% - 40px))`;
   $("trail").style.width = `calc(${p} * (100% - 40px) + 6px)`;
-  document.title = `${fmt(left)} ・ ${current.task}`;
+  document.title = `${fmt(left)} ・ ${current.goal || current.task || "30mm"}`;
 }
 
 // ---- 進み方の表示(バー / ブロック / ランナー) ----
@@ -230,7 +240,7 @@ function finish(aborted) {
     beep();
     try {
       if ("Notification" in window && Notification.permission === "granted") {
-        new Notification("30分経過", { body: `目標: ${current.goal}\n達成度を記録しましょう` });
+        new Notification("30分経過", { body: `${current.goal ? `目標: ${current.goal}\n` : ""}達成度を記録しましょう` });
       }
     } catch { /* ignore */ }
   }
@@ -263,7 +273,7 @@ async function openPip() {
     }
   });
   const wrap = el("div", "pip");
-  const goal = el("div", "pip-goal", current.goal);
+  const goal = el("div", "pip-goal", current.goal || current.task || "30分集中");
   goal.id = "pip-goal";
   const back = el("button", "primary", "評価する");
   back.id = "pip-back";
@@ -347,7 +357,7 @@ function renderResume() {
   items.forEach((l) => {
     const row = el("div", "resume-item");
     const body = el("div", "resume-body");
-    body.append(el("div", "goal", l.goal));
+    body.append(el("div", "goal", goalText(l.goal)));
     const meta = el("div", "tags");
     meta.append(el("span", "genre-tag", l.task), el("span", "meta", `達成度 ${l.rating}/5`));
     body.append(meta);
@@ -472,8 +482,7 @@ twoTap($("clear-done"), "達成済みをすべて消す", "もう一度押すと
 $("setup").addEventListener("submit", (e) => {
   e.preventDefault();
   const task = normalizeTask($("task").value), goal = $("goal").value.trim();
-  if (!task || !goal) return;
-  setTasks([task, ...getTasks().filter((t) => t !== task)]);
+  if (task) setTasks([task, ...getTasks().filter((t) => t !== task)]);
   const now = Date.now();
   current = { task, goal, startedAt: now, endsAt: now + DURATION_MS };
   if (pendingContinue && pendingContinue.task === task) current.continuedFrom = pendingContinue.id;
@@ -506,10 +515,14 @@ $("rating").addEventListener("submit", (e) => {
   e.preventDefault();
   if (!rating) return;
   const logs = getLogs();
+  const filledTask = normalizeTask($("fill-task").value);
+  const task = current.task || filledTask || UNSORTED;
+  const goal = current.goal || $("fill-goal").value.trim();
+  if (filledTask && !current.task) setTasks([filledTask, ...getTasks().filter((t) => t !== filledTask)]);
   logs.push({
     id: String(current.startedAt),
-    task: current.task,
-    goal: current.goal,
+    task,
+    goal,
     startedAt: current.startedAt,
     finishedAt: current.finishedAt,
     minutes: Math.round((current.finishedAt - current.startedAt) / 60000),
@@ -591,7 +604,7 @@ function renderLog() {
   ol.innerHTML = "";
   items.forEach((l) => {
     const li = el("li", "entry");
-    li.append(el("div", "goal", l.goal));
+    li.append(el("div", "goal", goalText(l.goal)));
     const tags = el("div", "tags");
     tags.append(el("span", "genre-tag", l.task));
     if (l.continuedFrom) tags.append(el("span", "meta", "続き"));
@@ -743,7 +756,7 @@ function renderGenres(logs) {
     g.items.slice(0, 10).forEach((l) => {
       const li = el("li");
       const d = new Date(l.startedAt);
-      li.append(el("span", null, `${d.getMonth() + 1}/${d.getDate()} ${hhmm(l.startedAt)} ・ ${l.rating}/5 ・ `), document.createTextNode(l.goal));
+      li.append(el("span", null, `${d.getMonth() + 1}/${d.getDate()} ${hhmm(l.startedAt)} ・ ${l.rating}/5 ・ `), document.createTextNode(goalText(l.goal)));
       ul.append(li);
     });
     det.append(ul);
